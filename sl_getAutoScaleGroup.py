@@ -10,8 +10,6 @@ import sluser
 SL_USERNAME = sluser.SL_USERNAME
 SL_API_KEY = sluser.SL_API_KEY
 
-nsAutoScaleGroup = 'TK-as-group'
-
 _maskAutoScaleGroup = '''
     virtualGuestMemberCount
     '''
@@ -59,6 +57,5 @@ for asg in autoScaleGroups:
     )
 
 print(table)
-print("members: prefix-xxxx")
 
 exit()
