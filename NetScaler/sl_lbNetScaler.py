@@ -3,16 +3,12 @@
 
 __author__ = 'takechika'
 
-
+import sys, traceback
 from prettytable import PrettyTable
-import SoftLayer
-import sluser
+import SoftLayer, sluser
 
 # import the necessary libraries for netscaler nitro
-import json
-import urllib
-import httplib2
-import time
+import json, urllib, httplib2, time
 from nsnitro import *
 
 SL_USERNAME = sluser.SL_USERNAME
@@ -28,16 +24,15 @@ nsIpType = "public"                 # IP type used for NetScaler server ip. "pub
 
 def getASMembers(autoScaleGroups, nsAutoScaleGroup):
     """
-    Get array of dictionaries of all auto scale members of nsAutoScaleGroup
+    Get an array of dictionaries of all members of nsAutoScaleGroup from SoftLayer API
 
     :param autoScaleGroups: SoftLayer auto scale groups objects retrieved by getScaleGroups()
     :param nsAutoScaleGroup: SoftLayer auto scale group name which the script looks at to add/delete servers
     :return: Array of dictionaries of all auto scale members
     """
     for asg in autoScaleGroups:
-
+        asMembers = []
         if asg['name'] == nsAutoScaleGroup:
-            asMembers = []
             for a in asg['virtualGuestMembers'][0:]:
                 memberId = a['virtualGuest']['id']
                 asMember = {
@@ -47,11 +42,16 @@ def getASMembers(autoScaleGroups, nsAutoScaleGroup):
                     "privatePrimaryIP" : client['Virtual_Guest'].getPrimaryBackendIpAddress(id=memberId),
                 }
                 asMembers.append(asMember)
+            break
+
+    if len(asMembers) == 0:
+        sys.exit("No such auto scale group exists in SoftLayer auto scale configurations.")
+
     return(asMembers)
 
 def addNSServer(nsServerName, nsServerIp, nsServiceName, nsLBVServer):
     """
-    Add SoftLayer virtual servers to NetScaler servers,
+    Add SoftLayer VSIs to NetScaler servers,
     create new services and bind the services to LB virtual server.
     Must be logged in to NetScaler with API beforehand.
 
@@ -137,71 +137,84 @@ def getNsServersList(nitro):
     return nsServers
 
 
-# Connect to SoftLayer API
-client = SoftLayer.Client(username=SL_USERNAME, api_key=SL_API_KEY)
-autoScaleGroups = client['Account'].getScaleGroups()
-asMembers = getASMembers(autoScaleGroups, nsAutoScaleGroup)
+def getAutoScaleHostnamePrefix(autoScaleGroups, nsAutoScaleGroup):
+    """
+    Get auto scale hostname prefix
 
-# get auto scale hostname prefix
-for asg in autoScaleGroups:
-    if asg['name'] == nsAutoScaleGroup:
-        nsAutoScalePrefix = asg['virtualGuestMemberTemplate']['hostname']
-        break
-
-# Login to NetScaler with API
-nitro = NSNitro(nsHost, nsApiUser, nsApiPass)
-nitro.login()
-
-# Get the list of NetScaler servers
-nsServers = getNsServersList(nitro)
-
-# If an auto scale member is not in NetScaler severs,
-# add the member to NetScaler server
-asMemberNames = []
-addedServers = []
-for asm in asMembers:
-    # NetScaler parameters
-    nsServerName = asm['name']
-    nsPublicPrimaryIp = asm['publicPrimaryIP']
-    nsPrivatePrimaryIp = asm['privatePrimaryIP']
-    if nsIpType == "public":
-        nsServerIp = nsPublicPrimaryIp
-    else:
-        nsServerIp = nsPrivatePrimaryIp
-    nsServiceName = "service_http_" + nsServerIp.split(".")[-1]   # NetScaler Service Name for the server. "service_http_<IP's 4th octet>"
-
-    if not asm['name'] in nsServers:
-        addNSServer(nsServerName, nsServerIp, nsServiceName, nsLBVServer)
-        addedServers.append(asm['name'])
-        # print("Server \"%s\" created." % asm['name'])
-
-    # make array of asm['name']
-    asMemberNames.append(asm['name'])
+    :param autoScaleGroups:
+    :param nsAutoScaleGroup:
+    :return:
+    """
+    for asg in autoScaleGroups:
+        if asg['name'] == nsAutoScaleGroup:
+            nsAutoScalePrefix = asg['virtualGuestMemberTemplate']['hostname']
+    return nsAutoScalePrefix
 
 
-# If a NetScaler server with nsAutoPrefix prefix exists while not in auto scale member,
-# delete the server from NetScaler servers
-deletedServers = []
-for nss in nsServers:
-#    print(nss, nss[:-5], nsAutoScalePrefix)
-    if nss[:-5] == nsAutoScalePrefix:
-        if not nss in asMemberNames:
-            delNSServer(nss)
-            deletedServers.append(nss)
-            # print("Server \"%s\" deleted." % nss)
 
-# Logout from NetScaler
-nitro.logout()
+try:
 
-# Print results
-if len(addedServers) == 0:
-    print("No servers created.")
-else:
-    print("Created: %s" % addedServers)
+    # Connect to SoftLayer API
+    client = SoftLayer.Client(username=SL_USERNAME, api_key=SL_API_KEY)
+    autoScaleGroups = client['Account'].getScaleGroups()
+    asMembers = getASMembers(autoScaleGroups, nsAutoScaleGroup)
 
-if len(deletedServers) == 0:
-    print("No servers deleted.")
-else:
-    print("Deleted: %s" % deletedServers)
+    # get auto scale hostname prefix
+    nsAutoScalePrefix = getAutoScaleHostnamePrefix(autoScaleGroups, nsAutoScaleGroup)
 
-exit()
+    # Login to NetScaler with API
+    nitro = NSNitro(nsHost, nsApiUser, nsApiPass)
+    nitro.login()
+
+    # Get the list of NetScaler servers
+    nsServers = getNsServersList(nitro)
+
+    # If an auto scale member is not in NetScaler severs,
+    # add the member to NetScaler server
+    asMemberNames = []
+    addedServers = []
+    for asm in asMembers:
+        # NetScaler parameters
+        nsServerName = asm['name']
+        nsPublicPrimaryIp = asm['publicPrimaryIP']
+        nsPrivatePrimaryIp = asm['privatePrimaryIP']
+        if nsIpType == "public":
+            nsServerIp = nsPublicPrimaryIp
+        else:
+            nsServerIp = nsPrivatePrimaryIp
+        nsServiceName = "service_http_" + nsServerIp.split(".")[-1]   # NetScaler Service Name for the server. "service_http_<IP's 4th octet>"
+
+        if not asm['name'] in nsServers:
+            addNSServer(nsServerName, nsServerIp, nsServiceName, nsLBVServer)
+            addedServers.append(asm['name'])
+            # print("Server \"%s\" created." % asm['name'])
+
+        # make array of asm['name']
+        asMemberNames.append(asm['name'])
+
+
+    # If a NetScaler server with nsAutoPrefix prefix exists while not in auto scale member,
+    # delete the server from NetScaler servers
+    deletedServers = []
+    for nss in nsServers:
+        if nss[:-5] == nsAutoScalePrefix:
+            if not nss in asMemberNames:
+                delNSServer(nss)
+                deletedServers.append(nss)
+                # print("Server \"%s\" deleted." % nss)
+
+    # Logout from NetScaler
+    nitro.logout()
+
+    # Print results
+    print("No servers created.") if len(addedServers) == 0 else "Created: %s" % addedServers
+    print("No servers deleted.") if len(deletedServers) == 0 else "Deleted: %s" % deletedServers
+
+
+except NSNitroError, e:
+    print e.message
+
+except SystemExit as e:
+    sys.exit(e)
+
+
