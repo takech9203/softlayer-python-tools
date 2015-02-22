@@ -47,7 +47,7 @@ python sl_getAutoScaleGroup.py
 
 License 
 -------
-Copyright &copy; 2015 takechika
+Copyright &copy; 2015 takechika  
 Distributed under the [MIT License][mit].
 
 [MIT]: http://www.opensource.org/licenses/mit-license.php
