@@ -7,7 +7,7 @@ import sys, traceback
 from prettytable import PrettyTable
 import SoftLayer, sluser
 
-# import the necessary libraries for netscaler nitro
+# import the necessary libraries for NetScaler nitro
 import json, urllib, httplib2, time
 from nsnitro import *
 
@@ -15,7 +15,7 @@ SL_USERNAME = sluser.SL_USERNAME
 SL_API_KEY = sluser.SL_API_KEY
 
 # NetScaler constant
-nsAutoScaleGroup = "TK-as-group"    # SoftLayer auto scale group name
+nsAutoScaleGroup = "TK-as-group"    # softlayer-python-tools auto scale group name
 nsHost = "192.168.1.141"            # NetScaler's IP address
 nsApiUser = "nsroot"                # NetScaler login user
 nsApiPass = "nsroot"                # NetScaler login password
@@ -24,10 +24,10 @@ nsIpType = "public"                 # IP type used for NetScaler server ip. "pub
 
 def getASMembers(autoScaleGroups, nsAutoScaleGroup):
     """
-    Get an array of dictionaries of all members of nsAutoScaleGroup from SoftLayer API
+    Get an array of dictionaries of all members of nsAutoScaleGroup from softlayer-python-tools API
 
-    :param autoScaleGroups: SoftLayer auto scale groups objects retrieved by getScaleGroups()
-    :param nsAutoScaleGroup: SoftLayer auto scale group name which the script looks at to add/delete servers
+    :param autoScaleGroups: softlayer-python-tools auto scale groups objects retrieved by getScaleGroups()
+    :param nsAutoScaleGroup: softlayer-python-tools auto scale group name which the script looks at to add/delete servers
     :return: Array of dictionaries of all auto scale members
     """
     for asg in autoScaleGroups:
@@ -45,13 +45,13 @@ def getASMembers(autoScaleGroups, nsAutoScaleGroup):
             break
 
     if len(asMembers) == 0:
-        sys.exit("No such auto scale group exists in SoftLayer auto scale configurations.")
+        sys.exit("No such auto scale group exists in softlayer-python-tools auto scale configurations.")
 
     return(asMembers)
 
 def addNSServer(nsServerName, nsServerIp, nsServiceName, nsLBVServer):
     """
-    Add SoftLayer VSIs to NetScaler servers,
+    Add softlayer-python-tools VSIs to NetScaler servers,
     create new services and bind the services to LB virtual server.
     Must be logged in to NetScaler with API beforehand.
 
@@ -110,7 +110,6 @@ def delNSServer(nsServerName):
     delserver = NSServer()
     delserver.set_name(nsServerName)
     NSServer.delete(nitro, delserver)
-    # print("Server deleted.")
 
     """
     try:
@@ -136,7 +135,6 @@ def getNsServersList(nitro):
         nsServers.append(n.get_name())
     return nsServers
 
-
 def getAutoScaleHostnamePrefix(autoScaleGroups, nsAutoScaleGroup):
     """
     Get auto scale hostname prefix
@@ -151,10 +149,8 @@ def getAutoScaleHostnamePrefix(autoScaleGroups, nsAutoScaleGroup):
     return nsAutoScalePrefix
 
 
-
 try:
-
-    # Connect to SoftLayer API
+    # Connect to softlayer-python-tools API
     client = SoftLayer.Client(username=SL_USERNAME, api_key=SL_API_KEY)
     autoScaleGroups = client['Account'].getScaleGroups()
     asMembers = getASMembers(autoScaleGroups, nsAutoScaleGroup)
@@ -192,7 +188,6 @@ try:
         # make array of asm['name']
         asMemberNames.append(asm['name'])
 
-
     # If a NetScaler server with nsAutoPrefix prefix exists while not in auto scale member,
     # delete the server from NetScaler servers
     deletedServers = []
@@ -209,7 +204,6 @@ try:
     # Print results
     print("No servers created.") if len(addedServers) == 0 else "Created: %s" % addedServers
     print("No servers deleted.") if len(deletedServers) == 0 else "Deleted: %s" % deletedServers
-
 
 except NSNitroError, e:
     print e.message
