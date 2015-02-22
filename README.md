@@ -5,7 +5,6 @@ Miscellaneous tools developed using SoftLayer Python API.
 
 - **sl_getAutoScaleGroup.py** - shows the list of SoftLayer auto scale groups.
 - **sl_getInstances.py** - shows the list of SoftLayer VSIs and bare metal servers and their attributes.
-- **sl_getInventory.py** - shows the list of SoftLayer VSIs and bare metal servers.
 - **sl_getLocation** - shows the list of VSIs and hosts they are running on.
 - **sl_getNetworkStorage.py** - shows the list of SoftLayer network storage including iSCSI, CPS, NAS, Object Storage and EVault.
 - **sl_getUsers** - shows the list of SoftLayer users.
