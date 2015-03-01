@@ -1,0 +1,39 @@
+# comments should start with #
+
+# GRE settings
+set interfaces tunnel tun0 address __GRE_MY_ADDR__
+set interfaces tunnel tun0 encapsulation gre
+set interfaces tunnel tun0 multicast enable
+set interfaces tunnel tun0 local-ip __MY_ADDR__
+set interfaces tunnel tun0 remote-ip __PEER_ADDR__
+
+# IPsec ESP policy settings
+set vpn ipsec esp-group ESP1 lifetime 3600
+set vpn ipsec esp-group ESP1 mode tunnel
+set vpn ipsec esp-group ESP1 pfs enable
+set vpn ipsec esp-group ESP1 proposal 1 encryption aes128
+set vpn ipsec esp-group ESP1 proposal 1 hash sha1
+
+# IPsec IKE policy settings
+set vpn ipsec ike-group IKE1 lifetime 86400
+set vpn ipsec ike-group IKE1 proposal 1 dh-group 5
+set vpn ipsec ike-group IKE1 proposal 1 encryption aes128
+set vpn ipsec ike-group IKE1 proposal 1 hash sha1
+
+# IPsec interface settings
+set vpn ipsec ipsec-interfaces interface eth1
+
+# IPsec VPN settings
+set vpn ipsec site-to-site peer __PEER_ADDR__ authentication mode pre-shared-secret
+set vpn ipsec site-to-site peer __PEER_ADDR__ authentication pre-shared-secret test_key_1
+set vpn ipsec site-to-site peer __PEER_ADDR__ default-esp-group ESP1
+set vpn ipsec site-to-site peer __PEER_ADDR__ ike-group IKE1
+set vpn ipsec site-to-site peer __PEER_ADDR__ local-address __MY_ADDR__
+set vpn ipsec site-to-site peer __PEER_ADDR__ tunnel 1 protocol gre
+
+# Static Route
+set protocols static route 192.168.60.0/24 next-hop 10.3.3.2
+
+# Commit
+#top
+#commit
