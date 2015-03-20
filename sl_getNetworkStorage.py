@@ -45,12 +45,10 @@ def lookup(dic, key, *keys):
     This helps simplify code that uses heavily nested dictionaries. It will
     return None if any of the keys in *keys do not exist.
 
-    ::
-
-        >>> lookup({'this': {'is': 'nested'}}, 'this', 'is')
+        > lookup({'this': {'is': 'nested'}}, 'this', 'is')
         nested
 
-        >>> lookup({}, 'this', 'is')
+        > lookup({}, 'this', 'is')
         None
 
     """
@@ -74,7 +72,7 @@ for ns in networkStorage:
         [
             ns['id'],
             ns['nasType'],
-            ns['serviceResource']['datacenter'].get('name'),
+            lookup(ns, 'serviceResource', 'datacenter', 'name') or '-',
             ns['username'],
             ns['capacityGb'],
             lookup(ns, 'iops') or '-' ,
